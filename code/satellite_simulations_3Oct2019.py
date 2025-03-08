@@ -1,3 +1,6 @@
+# modify from Spooky action at a global distance: analysis of space-based entanglement distribution for the quantum internet
+# src link https://arxiv.org/src/1912.06678v3/anc/satellite_simulations_3Oct2019.py
+ 
 import numpy as np
 import matplotlib.pyplot as plt
 #import mpl_toolkits.mplot3d.axes3d as p3
