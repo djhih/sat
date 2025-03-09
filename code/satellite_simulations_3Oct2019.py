@@ -834,16 +834,39 @@ def ground_to_atmosphere_distance(ground_ecef, sat_ecef, R=6371000, atmosphere_t
     distance = t * np.linalg.norm(v)
     return distance
 
-num_rings = 6       # 地面站環數
-num_sats_per_ring = 10  # 每個環的衛星數
-R = 6.371e6         # 地球半徑 (m)
-h = 500e3           # 衛星高度 (m)
 
-# 生成衛星與地面站網絡
-S, G = generate_network(num_rings, num_sats_per_ring, R, h)
+if __name__ == '__main__':
 
-# 繪製網絡
-plot_initial_configuration(G, S, R)
+    # 參數設定：環數、每環衛星數、地球半徑（公尺）及衛星高度（公尺）
+    num_rings = 6         # 地面站環數
+    num_sats_per_ring = 10  # 每個環的衛星數量
+    R = 6.371e6           # 地球半徑 (m)
+    h = 500e3             # 衛星高度 (m)
+    
+    # 產生衛星與地面站網路
+    S, G = generate_network(num_rings, num_sats_per_ring, R, h)
+    
+    # 繪製初始配置
+    plot_initial_configuration(G, S, R)
+    
+    output_filename = "satellite_gs_distances.txt"
 
+    with open(output_filename, "w", encoding="utf-8") as f:
+        # 寫入標題列，CSV 格式方便後續處理
+        f.write("GS_ring,GS_id,Sat_ring,Sat_id,Distance(m)\n")
+        
+        # 計算並寫入每一個 GS 與每一顆衛星之間的歐式距離
+        for ring_g in sorted(G.keys()):
+            for gs_key in sorted(G[ring_g].keys()):
+                gs_pos = np.array(G[ring_g][gs_key])
+                for ring_s in sorted(S.keys()):
+                    # 只對數字 key 進行排序（排除 'axis'）
+                    for sat_key in sorted([key for key in S[ring_s].keys() if key != 'axis']):
+                        sat_pos = np.array(S[ring_s][sat_key])
+                        distance = np.linalg.norm(sat_pos - gs_pos)
+                        # 輸出格式：地面站環、地面站編號、衛星環、衛星編號、距離（公尺）
+                        f.write(f"地面站環{ring_g},地面站編號{gs_key},衛星環{ring_s},衛星編號{sat_key},距離（公尺）{distance:.2f}\n")
+    
+    print(f"距離資料已匯出到 {output_filename}")
 
 
