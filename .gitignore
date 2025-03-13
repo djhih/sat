@@ -1,0 +1,4 @@
+*.log
+dataset/paper
+dataset/code/symbol
+.vscode
