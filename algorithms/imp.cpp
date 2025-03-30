@@ -78,7 +78,7 @@ struct GroundStation {
 struct Requirement {
     int id;
     int gs1, gs2;
-    int served_by_sat_id;
+    int served_by_sat_id; //! use for greedy
     vector<double> gen_rate; // generation rate for each satellite
 
     Requirement() : id(0), gs1(0), gs2(0), served_by_sat_id(-1), gen_rate(vector<double>()) {}
@@ -107,7 +107,6 @@ GroundStation gs[1000];
 Requirement req[1000];
 
 void data_process(){
-    
     for (int i = 0; i < G; i++){
         for (int j = 0; j < S; j++){
             if (sat[j].check_fid(i)){
@@ -124,14 +123,76 @@ void data_process(){
                 double rate1 = rate_gs_sat[{req[i].gs1, j}];
                 double rate2 = rate_gs_sat[{req[i].gs2, j}];
                 rate_gs_p_sat[{i, j}] = min(rate1, rate2);
-                // cout << "rate1 " << rate1 << " rate2 " << rate2 << '\n';
+                if(req[i].gs1 == 0 && req[i].gs2 == 2 && j == 2){
+                cout << "rate1 " << rate1 << " rate2 " << rate2 << '\n';
+                cout << rate_gs_p_sat[{0, 2}] << '\n';}
                 req[i].gen_rate[j] = (min(rate1, rate2));
             }
         }
     }
 }
 
-void greedy_algorithm(){
+struct Node {
+    int gs1, gs2, gsp_id, sat, id;
+    bool erased = 0;
+    double weight_degree;
+    vector<int>neighboor;
+    Node() : gs1(-1), gs2(-1), gsp_id(-1), sat(-1), weight_degree(-1), id(-1), neighboor(vector<int>()) {}
+    Node(int gs1, int gs2, int gsp_id, int sat) : 
+        gs1(gs1), gs2(gs2), gsp_id(gsp_id), sat(sat), weight_degree(-1), neighboor(vector<int>()) {}
+};
+
+vector<Node>nodes;
+
+void print_nodes(){
+    for(int i=0; i<nodes.size(); i++){
+        cout << "node " << i << '\n';
+        cout << "gs1 " << nodes[i].gs1 << " gs2 " << nodes[i].gs2 << " sat " << nodes[i].sat << '\n';
+        cout << "weight degree " << nodes[i].weight_degree << '\n';
+        cout << "neighboor: ";
+        for(auto x:nodes[i].neighboor) cout << x << ' ';
+        cout << '\n';
+    }
+}
+
+void transfer_graph(){
+    int ptr = 0;
+    for (int i=0; i<S; i++) {
+        auto gss = sat[i].gsp_serve;
+        for(auto x:gss){
+            int tmp_gs1 = req[x].gs1, tmp_gs2 = req[x].gs2;
+            if(tmp_gs1 > tmp_gs2)
+                swap(tmp_gs1, tmp_gs2); 
+            Node tmp(tmp_gs1, tmp_gs2, x, i); // gs1, gs2, req_id, sat
+            tmp.id = ptr;
+            nodes.push_back(tmp); 
+            ptr++;
+        }
+    }  
+    for(int i=0; i<ptr; i++){
+        for(int j=i+1; j<ptr; j++){
+            if(nodes[i].gs1 == nodes[j].gs1 || nodes[i].gs2 == nodes[j].gs2 || nodes[i].sat == nodes[j].sat){
+                nodes[i].neighboor.emplace_back(j);
+                nodes[j].neighboor.emplace_back(i);
+            }
+        }
+    }
+    for(int i=0; i<ptr; i++){
+        sort(nodes[i].neighboor.begin(), nodes[i].neighboor.end());
+    }
+    for(int i=0; i<ptr; i++){
+        double weight = 0;
+        for(auto v: nodes[i].neighboor){
+            weight += rate_gs_p_sat[{nodes[v].gsp_id, nodes[v].sat}];
+        }
+        weight /= (double)(nodes[i].neighboor.size());
+        nodes[i].weight_degree = weight * weight; //! notice we set weight_degree as weight*weight
+    }
+    print_nodes();
+}
+
+vector<pair<int, int>>greedy_ans_gsp_sat;
+void greedy(){
     priority_queue<Requirement_queue, vector<Requirement_queue>, CompareRequirement> req_queue;
     for (int i = 0; i < R; i++){
         for (int j = 0; j < S; j++){
@@ -141,6 +202,7 @@ void greedy_algorithm(){
             // cout << "push " << req[i].gen_rate[j] << '\n';
         }
     }
+
     set<int> sat_can_use, gs_can_use;
     for (int i = 0; i < S; i++){
         sat_can_use.insert(i);
@@ -148,7 +210,7 @@ void greedy_algorithm(){
     for (int i=0; i<G; i++){
         gs_can_use.insert(i);
     }
-    
+
     while (!req_queue.empty() && !sat_can_use.empty()){
         auto tp = req_queue.top(); 
         req_queue.pop();
@@ -157,11 +219,84 @@ void greedy_algorithm(){
             continue;
         }
         int cur_rq_id = tp.req_id;
-        req[cur_rq_id].served_by_sat_id = tp.sat; 
+        req[cur_rq_id].served_by_sat_id = tp.sat;  // not really needed
+        greedy_ans_gsp_sat.push_back({cur_rq_id, tp.sat});
         sat_can_use.erase(tp.sat);
         gs_can_use.erase(tp.gs1);
         gs_can_use.erase(tp.gs2);
     }
+}
+
+set<int>imp_ans_nodes;
+void imp(){
+    // 0. set weight_degree to squre in transfer graph
+    // 1. greedy to get inital answer
+    // 2. find all claws in graph(nodes)
+    // 3. everytime we find a claw, we have to check if it can improve answer
+    //    3.1 how to check?
+    //    3.2 we have to removed the node connected to the talons
+    // 4. if it can improve, then add all, and remove the node connected to the talons  
+    //    4.1 after add ans, goto 2.
+    // 5. if not go to next claw, and do 3.2 until no more claw can add
+    
+    greedy(); // 1. get greedy_ans_gsp_sat
+
+    // copy answer
+    for(int i=0; i<greedy_ans_gsp_sat.size(); i++){
+        for(int j=0; j<nodes.size(); j++){
+            if(nodes[j].gsp_id == greedy_ans_gsp_sat[i].first && nodes[j].sat == greedy_ans_gsp_sat[i].second){
+                imp_ans_nodes.emplace(j);
+            }
+        }
+    }
+
+    
+    
+    // 2. find all claws
+    for(int i=0; i<nodes.size(); i++){
+        int center = i, add_val = 0;     // choose nodes[i] as center node
+        set<int>add_tmp; // add_list is the talons needed to add into answer
+        for(auto tal: nodes[i].neighboor){
+            bool connected = 0;
+            for(auto x: add_tmp){
+                if(binary_search(nodes[tal].neighboor.begin(), nodes[tal].neighboor.end(), x) == 1){
+                    connected = 1;
+                    break;
+                }
+            }
+            if(connected == 0){
+                add_tmp.emplace(tal);
+                add_val += nodes[tal].weight_degree;
+            }
+        }
+
+        // remove thoses nodes connect to the node in add_list
+        set<int>del_tmp;
+        for(auto x: add_tmp){
+            // binary search imp ans
+            for(auto nei: nodes[x].neighboor){
+                if(imp_ans_nodes.count(nei) && del_tmp.count(nei) == 0){
+                    del_tmp.emplace(nei);
+                    add_val -= nodes[nei].weight_degree;
+                }
+            }
+        }
+
+        // apply add and del operation
+        if(add_val > 0){
+            for(auto x:add_tmp){
+                imp_ans_nodes.emplace(x);
+            }  
+            for(auto x:del_tmp){
+                imp_ans_nodes.erase(x);
+            }
+            i = 0; // find all claw again
+        } else { 
+            // not found -> end
+        }
+    }    
+
+    
 }
 
 void input(){
@@ -201,26 +336,23 @@ void input(){
     }
 }
 
-
-
 void output(){
-    ofstream out("res_greedy.txt");
-    double ans = 0;
-    for (int i = 0; i < R; i++){
-        int cur_served_sat_id = req[i].served_by_sat_id;
-        if (cur_served_sat_id != -1 && req[i].gen_rate[cur_served_sat_id] != 0){
-            ans += req[i].gen_rate[cur_served_sat_id];
-            out << "req " << i << " gs1 " << req[i].gs1 << " gs2 " << req[i].gs2 << " is served by " << cur_served_sat_id << " sat with gen rate " << req[i].gen_rate[cur_served_sat_id] << '\n';
-        }
+    ofstream out("res_max.txt");
+    double tot_rate = 0;
+    for(auto x:imp_ans_nodes){
+        cout << "accept gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 
+            << " sat " << nodes[x].sat << " gen rate " << rate_gs_p_sat[{nodes[x].gsp_id, nodes[x].sat}] << '\n';
+        tot_rate += rate_gs_p_sat[{nodes[x].gsp_id, nodes[x].sat}];
     }
-    out << "Total generation rate: " << ans << '\n';
+    out << "Total generation rate: " << tot_rate << '\n';
     out.close();
 }
 
 int main(){
     input();
     data_process();
-    greedy_algorithm();
+    transfer_graph();
+    // dfs();
     output();
     return 0;
 }

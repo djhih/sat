@@ -107,7 +107,6 @@ GroundStation gs[1000];
 Requirement req[1000];
 
 void data_process(){
-    
     for (int i = 0; i < G; i++){
         for (int j = 0; j < S; j++){
             if (sat[j].check_fid(i)){
@@ -124,44 +123,105 @@ void data_process(){
                 double rate1 = rate_gs_sat[{req[i].gs1, j}];
                 double rate2 = rate_gs_sat[{req[i].gs2, j}];
                 rate_gs_p_sat[{i, j}] = min(rate1, rate2);
-                // cout << "rate1 " << rate1 << " rate2 " << rate2 << '\n';
+                if(req[i].gs1 == 0 && req[i].gs2 == 2 && j == 2){
+                cout << "rate1 " << rate1 << " rate2 " << rate2 << '\n';
+                cout << rate_gs_p_sat[{0, 2}] << '\n';}
                 req[i].gen_rate[j] = (min(rate1, rate2));
             }
         }
     }
 }
 
-void greedy_algorithm(){
-    priority_queue<Requirement_queue, vector<Requirement_queue>, CompareRequirement> req_queue;
-    for (int i = 0; i < R; i++){
-        for (int j = 0; j < S; j++){
-            if (req[i].gen_rate[j] == -1) continue;
-            Requirement_queue tmp(req[i].gs1, req[i].gs2, j, i, req[i].gen_rate[j]);
-            req_queue.push(tmp); 
-            // cout << "push " << req[i].gen_rate[j] << '\n';
+struct Node {
+    int gs1, gs2, gsp_id, sat, id;
+    bool erased = 0;
+    double weight_degree;
+    vector<int>neighboor;
+    Node() : gs1(-1), gs2(-1), gsp_id(-1), sat(-1), weight_degree(-1), id(-1), neighboor(vector<int>()) {}
+    Node(int gs1, int gs2, int gsp_id, int sat) : 
+        gs1(gs1), gs2(gs2), gsp_id(gsp_id), sat(sat), weight_degree(-1), neighboor(vector<int>()) {}
+};
+
+vector<Node>nodes;
+
+void print_nodes(){
+    for(int i=0; i<nodes.size(); i++){
+        cout << "node " << i << '\n';
+        cout << "gs1 " << nodes[i].gs1 << " gs2 " << nodes[i].gs2 << " sat " << nodes[i].sat << '\n';
+        cout << "weight degree " << nodes[i].weight_degree << '\n';
+        cout << "neighboor: ";
+        for(auto x:nodes[i].neighboor) cout << x << ' ';
+        cout << '\n';
+    }
+}
+
+void transfer_graph(){
+    int ptr = 0;
+    for (int i=0; i<S; i++) {
+        auto gss = sat[i].gsp_serve;
+        for(auto x:gss){
+            int tmp_gs1 = req[x].gs1, tmp_gs2 = req[x].gs2;
+            if(tmp_gs1 > tmp_gs2)
+                swap(tmp_gs1, tmp_gs2); 
+            Node tmp(tmp_gs1, tmp_gs2, x, i); // gs1, gs2, req_id, sat
+            tmp.id = ptr;
+            nodes.push_back(tmp); 
+            ptr++;
+        }
+    }  
+    for(int i=0; i<ptr; i++){
+        for(int j=i+1; j<ptr; j++){
+            if(nodes[i].gs1 == nodes[j].gs1 || nodes[i].gs2 == nodes[j].gs2 || nodes[i].sat == nodes[j].sat){
+                if(i == 3){
+                    cout << "node " << i << " node " << j << '\n';
+                    cout << "gs1 " << nodes[i].gs1 << ' ' << nodes[j].gs1 << '\n';
+                    cout << "gs2 " << nodes[i].gs2 << ' ' << nodes[j].gs2 << '\n';
+                    cout << "sat " << nodes[i].sat << ' ' << nodes[j].sat << '\n';
+                }
+                nodes[i].neighboor.emplace_back(j);
+                nodes[j].neighboor.emplace_back(i);
+            }
         }
     }
-    set<int> sat_can_use, gs_can_use;
-    for (int i = 0; i < S; i++){
-        sat_can_use.insert(i);
+    for(int i=0; i<ptr; i++){
+        double weight = 0;
+        for(auto v: nodes[i].neighboor){
+            weight += rate_gs_p_sat[{nodes[v].gsp_id, nodes[v].sat}];
+        }
+        weight /= (double)(nodes[i].neighboor.size());
+        nodes[i].weight_degree = weight;
     }
-    for (int i=0; i<G; i++){
-        gs_can_use.insert(i);
+    print_nodes();
+}
+
+vector<int>ans;
+void dfs(){
+    // 1. find minimum weight_degree node to add to answer
+    // 2. erase the node's neighboor
+    int can_use_count = nodes.size();
+    while(can_use_count > 0){
+        int cur_choose = -1, cur_wd = 10000000;
+        for(int i=0; i<nodes.size(); i++){
+            if(nodes[i].erased) continue;
+            if(nodes[i].weight_degree < cur_wd){
+                cur_wd = nodes[i].weight_degree;
+                cur_choose = i;
+            }
+        }
+        if(cur_choose != -1)
+            ans.push_back(cur_choose);
+        cout << "push " << cur_choose << '\n';
+        // cut
+        nodes[cur_choose].erased = 1;
+        can_use_count--;
+        cout << "erase node choose " << cur_choose << '\n';
+        for(auto nid:nodes[cur_choose].neighboor){
+            nodes[nid].erased = 1;
+            cout << "erase node " << nid << '\n';
+            can_use_count--;
+        }
     }
     
-    while (!req_queue.empty() && !sat_can_use.empty()){
-        auto tp = req_queue.top(); 
-        req_queue.pop();
-        if ((sat_can_use.count(tp.sat) == 0 || gs_can_use.count(tp.gs1) == 0 || gs_can_use.count(tp.gs2) == 0) 
-                || req[tp.req_id].served_by_sat_id != -1){
-            continue;
-        }
-        int cur_rq_id = tp.req_id;
-        req[cur_rq_id].served_by_sat_id = tp.sat; 
-        sat_can_use.erase(tp.sat);
-        gs_can_use.erase(tp.gs1);
-        gs_can_use.erase(tp.gs2);
-    }
 }
 
 void input(){
@@ -204,23 +264,22 @@ void input(){
 
 
 void output(){
-    ofstream out("res_greedy.txt");
-    double ans = 0;
-    for (int i = 0; i < R; i++){
-        int cur_served_sat_id = req[i].served_by_sat_id;
-        if (cur_served_sat_id != -1 && req[i].gen_rate[cur_served_sat_id] != 0){
-            ans += req[i].gen_rate[cur_served_sat_id];
-            out << "req " << i << " gs1 " << req[i].gs1 << " gs2 " << req[i].gs2 << " is served by " << cur_served_sat_id << " sat with gen rate " << req[i].gen_rate[cur_served_sat_id] << '\n';
-        }
+    ofstream out("res_max.txt");
+    double tot_rate = 0;
+    for(int i=0; i<ans.size(); i++){
+        cout << "accept gs1 " << nodes[ans[i]].gs1 << " gs2 " << nodes[ans[i]].gs2 
+            << " sat " << nodes[ans[i]].sat << " gen rate " << rate_gs_p_sat[{nodes[ans[i]].gsp_id, nodes[ans[i]].sat}] << '\n';
+        tot_rate += rate_gs_p_sat[{nodes[ans[i]].gsp_id, nodes[ans[i]].sat}];
     }
-    out << "Total generation rate: " << ans << '\n';
+    out << "Total generation rate: " << tot_rate << '\n';
     out.close();
 }
 
 int main(){
     input();
     data_process();
-    greedy_algorithm();
+    transfer_graph();
+    dfs();
     output();
     return 0;
 }
