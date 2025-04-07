@@ -62,7 +62,6 @@ double get_R_earth() {
     return 6.371e6; 
 }
 
-// --- ??z?v?????p?? ---
 double eta_sg(double L, double lam = 810e-9, double w0 = 0.025, double rg = 0.75) {
     double LR = PI * w0 * w0 / lam;
     double wg = w0 * sqrt(1 + (L*L) / (LR*LR));
@@ -95,7 +94,6 @@ double fidelity_Fij(double theta_k1, double theta_e, double n_sg, double n_ij, d
     return 0.0;
 }
 
-//! not sure how to decide gen rate 
 double gen_rate(double d) {
     // return 1;
     random_device rd;
@@ -105,13 +103,11 @@ double gen_rate(double d) {
     return dis2(gen);
 }
 
-// --- ?s???Z???P?????? ---
 double link_distance(double d, double h) {
     double R = get_R_earth();
     return sqrt(4.0 * R * (R + h) * pow(sin(d / (4.0 * R)), 2) + h * h);
 }
 
-// --- ???? ---
 double compute_elevation_angle(const vector<double>& ground_ecef, const vector<double>& sat_ecef, bool degrees = false) {
     vector<double> diff = subtract(sat_ecef, ground_ecef);
     double norm_diff = norm(diff);

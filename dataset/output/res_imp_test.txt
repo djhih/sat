@@ -1,0 +1,3 @@
+accept gs1 0 gs2 3 sat 1 gen rate 24
+accept gs1 1 gs2 2 sat 2 gen rate 40
+Total generation rate: 64
