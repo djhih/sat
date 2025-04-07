@@ -2,3 +2,6 @@
 dataset/paper
 dataset/code/symbol
 .vscode
+output
+*.txt
+*.exe

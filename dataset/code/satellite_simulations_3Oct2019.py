@@ -96,6 +96,10 @@ def link_distance(d,h):
     # Last modified: 18 July 2019
 
     '''
+    計算其中一個地面站到衛星的距離
+    假設當前衛星於兩個地面站中間，且衛星於兩地面站中點之高空
+    傳入 D 代表兩地面站距離, h 代表衛星高度
+
     Returns the link distance L between two ground stations separated by an 
     arc-distance of d (in meters) and a satellite at an altitude of
     h (in meters) located at the midpoint of the ground stations (so both
@@ -112,13 +116,13 @@ def opt_alt_arc(d):
     # Last modified: 18 July 2019
 
     '''
+     計算最佳衛星高度，使得兩個地面站之間的光傳輸效率 eta_Tot 最大。
     Finds the optimal satellite altitude for two ground stations separated
     by an arc-distance of d (in meters). Optimality is in terms of the 
     transmissivity eta_Tot.
     '''
 
     def objfunc(h):
-
         return -eta_Tot(link_distance(d,h),h)
 
     
@@ -838,8 +842,8 @@ def ground_to_atmosphere_distance(ground_ecef, sat_ecef, R=6371000, atmosphere_t
 if __name__ == '__main__':
 
     # 參數設定：環數、每環衛星數、地球半徑（公尺）及衛星高度（公尺）
-    num_rings = 6         # 地面站環數
-    num_sats_per_ring = 10  # 每個環的衛星數量
+    num_rings = 4         # 地面站環數
+    num_sats_per_ring = 4  # 每個環的衛星數量
     R = 6.371e6           # 地球半徑 (m)
     h = 500e3             # 衛星高度 (m)
     
