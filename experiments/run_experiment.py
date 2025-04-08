@@ -3,6 +3,10 @@ import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
+import matplotlib
+matplotlib.rcParams["font.family"] = "sans-serif"
+matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei", "SimHei", "Arial Unicode MS", "sans-serif"]
+matplotlib.rcParams["axes.unicode_minus"] = False
 
 def run_command(cmd, description="", timeout=None):
     print(description)
@@ -130,7 +134,7 @@ def plot_grouped_total_rates_by_algorithm(dataset_ids):
     """
     algo_suffixes = {
         "greedy": "greedy",
-        "heuristic": "heuristic",
+        "heuristic": "he",
         "max_independent": "max",
         "imp": "imp"
     }
@@ -194,16 +198,16 @@ def main():
     dataset_ids = []
     
     # 產生所有衛星資料
-    run_command(
-        ["python3", "dataset/code/tle_gen_all.py"],
-        "產生所有衛星資料..."
-    )
+    # run_command(
+    #     ["python3", "dataset/code/tle_gen_all.py"],
+    #     "產生所有衛星資料..."
+    # )
     
     # 執行多組實驗
-    for idx in range(6, 7):
+    for idx in range(1, 5):
         output_filename = op_filename + str(idx) + ".txt"
         num_req = 100
-        num_sat = idx * 10
+        num_sat = idx * 5
         
         dataset_ids.append(str(idx))
         print(f"\n===== 執行實驗：{idx} =====")
