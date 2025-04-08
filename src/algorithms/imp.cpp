@@ -429,6 +429,11 @@ bool get_claw(int center){
                         cout << "add_val " << add_val << '\n';
                         found = 1;
                         break;
+                    } else {
+                        cout << "not add claw " << ' ';
+                        cout << "add_val " << add_val << ' ';
+                        cout << "i " << i << " j " << j << " k " << k << ' ';
+                        cout << "gs1 " << nodes[claw[0]].gs1 << " gs2 " << nodes[claw[0]].gs2 << " sat " << nodes[claw[0]].sat << '\n';
                     }
                 }
                 if(found == 1){
