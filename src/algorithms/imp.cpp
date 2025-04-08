@@ -333,15 +333,25 @@ bool DFS(int center, int cnt, vector<bool> &visited, set<int>cur_claw){
 // loop version
 bool get_claw(int center){
     int nei_cen = nodes[center].neighboor.size();
-    for(int i=0; i<nei_cen; i++){
+    vector<int>reduce_nodes;
+    for(auto x:nodes[center].neighboor){
+        if(imp_ans_nodes.count(x) == 0){
+            reduce_nodes.emplace_back(x);
+        }
+    }
+    int reduce_size = reduce_nodes.size();
+    for(int i0=0; i0<reduce_size; i0++){
+        int i = reduce_nodes[i0];
         if(imp_ans_nodes.count(i) == 1){
             continue;
         }
-        for(int j=i+1; j<nei_cen; j++){
+        for(int j0=i0+1; j0<reduce_size; j0++){
+            int j = reduce_nodes[j0];
             if(imp_ans_nodes.count(j) == 1){
                 continue;
             }
-            for(int k=j+1; k<nei_cen; k++){
+            for(int k0=j0+1; k0<reduce_size; k0++){
+                int k = reduce_nodes[k0];
                 if(imp_ans_nodes.count(k) == 1){
                     continue;
                 }
