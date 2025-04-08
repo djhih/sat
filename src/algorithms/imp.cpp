@@ -247,89 +247,6 @@ void rescale(double val_greedy){
     }
 }
 
-// DFS to find all claws
-// We need to count add_val in DFS
-// Biggest claw has 3 talons(=3)
-// we will set cur_claw as the talons we plan to add, if we find 3 talons, then we check if it can improve the answer
-// if it can improve, then we will add all the talons into the answer, remove the node connected to the talons, and return with value 1
-// if it cannot improve, then we will return with value 0
-
-set<int> last_claw;
-bool DFS(int center, int cnt, vector<bool> &visited, set<int>cur_claw){
-    if(cnt > 0){
-        // chekc if it can improve the answer
-        // 1. get all delete nodes
-        // 2. check if it can improve the answer
-        // 3. if it can improve, then add all, and remove the node connected to the talons
-
-        set<int>del_tmp;
-        for(auto x:cur_claw){
-            for(auto y:nodes[x].neighboor){
-                if(imp_ans_nodes.count(y) == 1){
-                    del_tmp.emplace(y);
-                }
-            }
-        }
-
-        double add_val = 0;
-        for(auto x: cur_claw){
-            add_val += nodes[x].weight * nodes[x].weight;
-        }
-        for(auto x: del_tmp){
-            add_val -= nodes[x].weight * nodes[x].weight;
-        }
-        
-        if(add_val > 0){
-            // add claw
-            for(auto x: cur_claw){ 
-                imp_ans_nodes.emplace(x);
-            }
-            // remove del_tmp
-            for(auto x: del_tmp){
-                imp_ans_nodes.erase(x);
-            }
-
-            cout << "add claw " << '\n';
-            for(auto x: cur_claw){
-                cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 << " sat " << nodes[x].sat << '\n';
-            }
-            cout << "del claw " << '\n';
-            for(auto x: del_tmp){
-                cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 << " sat " << nodes[x].sat << '\n';
-            }
-            cout << "add_val " << add_val << '\n';
-            return 1;
-        }
-
-        return 0;
-    }
-
-    for(int i=0; i<nodes[center].neighboor.size(); i++){
-        int nei = nodes[center].neighboor[i];
-        if(visited[nei] == 0){
-            visited[nei] = 1;
-
-            bool connected = 0;
-            // check if nei connect to the cur_claw
-            for(auto x: nodes[nei].neighboor){
-                if(cur_claw.count(x)){
-                    connected = 1;
-                    break;
-                }
-            }
-            if(connected == 1){
-                continue;
-            }
-            
-            cur_claw.emplace(nei);
-            DFS(center, cnt+1, visited, cur_claw);
-            cur_claw.erase(nei);
-            DFS(center, cnt+1, visited, cur_claw);
-        }
-    }
-    return 0;
-}
-
 // loop version
 bool get_claw(int center){
     int nei_cen = nodes[center].neighboor.size();
@@ -438,6 +355,7 @@ bool get_claw(int center){
                         }
                         cout << "add_val " << add_val << '\n';
                         found = 1;
+                        return found;
                         break;
                     } else {
                         cout << "not add claw " << ' ';
@@ -504,7 +422,8 @@ bool get_claw(int center){
             }
             cout << "add_val " << add_val << '\n';
             found = 1;
-            break;
+            return found;
+            // break;
         } else {
             cout << "not add claw " << '\n';
         }
