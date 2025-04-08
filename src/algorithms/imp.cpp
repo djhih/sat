@@ -335,7 +335,7 @@ bool get_claw(int center){
                         add_val -= nodes[x].weight * nodes[x].weight;
                     }
                     
-                    if(add_val > 0){
+                    if(add_val > 1e6){
                         // add claw
                         for(auto x: claw){ 
                             imp_ans_nodes.emplace(x);
@@ -358,10 +358,10 @@ bool get_claw(int center){
                         return found;
                         break;
                     } else {
-                        cout << "not add claw " << ' ';
-                        cout << "add_val " << add_val << ' ';
-                        cout << "i " << i << " j " << j << " k " << k << ' ';
-                        cout << "gs1 " << nodes[claw[0]].gs1 << " gs2 " << nodes[claw[0]].gs2 << " sat " << nodes[claw[0]].sat << '\n';
+                        // out << "not add claw " << ' ';
+                        // out << "add_val " << add_val << ' ';
+                        // out << "i " << i << " j " << j << " k " << k << ' ';
+                        // out << "gs1 " << nodes[claw[0]].gs1 << " gs2 " << nodes[claw[0]].gs2 << " sat " << nodes[claw[0]].sat << '\n';
                     }
                 }
                 if(found == 1){
@@ -402,7 +402,7 @@ bool get_claw(int center){
         for(auto x: del_tmp){
             add_val -= nodes[x].weight * nodes[x].weight;
         }
-        if(add_val > 0){
+        if(add_val > 1e6){
             // add claw
             for(auto x: claw){ 
                 imp_ans_nodes.emplace(x);
@@ -425,7 +425,7 @@ bool get_claw(int center){
             return found;
             // break;
         } else {
-            cout << "not add claw " << '\n';
+            // out << "not add claw " << '\n';
         }
     }
     if(found == 1){
