@@ -62,6 +62,7 @@ double get_R_earth() {
     return 6.371e6; 
 }
 
+// --- ��z�v�����p�� ---
 double eta_sg(double L, double lam = 810e-9, double w0 = 0.025, double rg = 0.75) {
     double LR = PI * w0 * w0 / lam;
     double wg = w0 * sqrt(1 + (L*L) / (LR*LR));
@@ -94,6 +95,7 @@ double fidelity_Fij(double theta_k1, double theta_e, double n_sg, double n_ij, d
     return 0.0;
 }
 
+//! not sure how to decide gen rate 
 double gen_rate(double d) {
     // return 1;
     random_device rd;
@@ -103,11 +105,13 @@ double gen_rate(double d) {
     return dis2(gen);
 }
 
+// --- �s���Z���P�̨ΰ��� ---
 double link_distance(double d, double h) {
     double R = get_R_earth();
     return sqrt(4.0 * R * (R + h) * pow(sin(d / (4.0 * R)), 2) + h * h);
 }
 
+// --- ���� ---
 double compute_elevation_angle(const vector<double>& ground_ecef, const vector<double>& sat_ecef, bool degrees = false) {
     vector<double> diff = subtract(sat_ecef, ground_ecef);
     double norm_diff = norm(diff);
@@ -138,7 +142,7 @@ double ground_to_atmosphere_distance(const std::vector<double>& gs_ecef, const s
     for (size_t i = 0; i < 3; i++) {
         d[i] = sat_ecef[i] - gs_ecef[i];
     }
-    d = normalize(d);  // ???o???V?q
+    d = normalize(d);  // ���o���V�q
 
     double R_atm = R + atmosphere_thickness;
 
@@ -153,21 +157,21 @@ double ground_to_atmosphere_distance(const std::vector<double>& gs_ecef, const s
         cerr << "gs ecef " << gs_ecef[0] << " " << gs_ecef[1] << " " << gs_ecef[2] << '\n';
         cerr << "sat ecef " << sat_ecef[0] << " " << sat_ecef[1] << " " << sat_ecef[2] << '\n';
         cerr << "gs norm " << gs_norm_sq << '\n';
-        throw std::runtime_error("No intersection: ??????|?o??A?]???a???????b?j??h??");
+        throw std::runtime_error("No intersection: ���Ӥ��|�o�͡A�]���a�������b�j��h��");
     }
 
     double sqrt_disc = std::sqrt(discriminant);
-    // ?D?o???? t1 ?M t2?A?q?` t1 ???t?]?I?V?g?u??V?^?At2 ????
+    // �D�o��Ӯ� t1 �M t2�A�q�` t1 ���t�]�I�V�g�u��V�^�At2 ����
     double t1 = (-B - sqrt_disc) / (2 * A);
     double t2 = (-B + sqrt_disc) / (2 * A);
 
-    // ??? t ?????B??p????]?? gs ?????I?^
+    // ��� t �����B�̤p���ȡ]�� gs �̪񪺥��I�^
     double t = (t1 >= 0) ? t1 : t2;
     if (t < 0) {
-        throw std::runtime_error("?g?u?P?j??h?L???V???I");
+        throw std::runtime_error("�g�u�P�j��h�L���V���I");
     }
 
-    return t; // t ???q?a?????u?g?u????I???Z?? (m)
+    return t; // t ���q�a�����u�g�u�ܥ��I���Z�� (m)
 }
 
 
@@ -203,7 +207,7 @@ vector<pair<int, int>> random_ground_satation_pair(int num, int G_total) {
     
     if (G_total < 2) {
         cerr << "Error: G_total must be at least 2!\n";
-        return result; // ??? vector
+        return result; // �Ū� vector
     }
 
     random_device rd;
@@ -296,8 +300,8 @@ int main(int argc, char* argv[]) {
     out.clear();
     out.close();
       
-    double R_earth_val = get_R_earth();   // ?a?y?b?| (m)
-    double h = 500e3;             // ??P???? (m)
+    double R_earth_val = get_R_earth();   // �a�y�b�| (m)
+    double h = 500e3;             // �ìP���� (m)
     
     string output_filename = "dataset/raw/dataset.txt";
 
@@ -339,9 +343,9 @@ int main(int argc, char* argv[]) {
             vector<double> gs_pos = ground_stations[j];
             
             double tmp_dis = norm(subtract(sat_pos, gs_pos));
-            double tmp_ang = compute_elevation_angle(gs_pos, sat_pos, true); // ???? (degree)
+            double tmp_ang = compute_elevation_angle(gs_pos, sat_pos, true); // ���� (degree)
             double tmp_h_atm = ground_to_atmosphere_distance(gs_pos, sat_pos);
-            double fid0 = 0.85;  // ?T?w??
+            double fid0 = 0.85;  // �T�w��
             // double height = norm(sat_pos) - R_earth_val;
             double tmp_fid = fidelity_Fij(tmp_ang, 20.0, eta_Tot(tmp_dis, tmp_h_atm), 1.0, fid0);
             // double tmp_fid = 1;
@@ -386,5 +390,3 @@ int main(int argc, char* argv[]) {
     cout << "finish all output to dataset.txt" << endl;
     return 0;
 }
-
-
