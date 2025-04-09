@@ -438,7 +438,7 @@ bool get_claw(int center){
                         }
                         cout << "add_val " << add_val << '\n';
                         found = 1;
-                        break;
+                        return found;
                     } else {
                         cout << "not add claw " << ' ';
                         cout << "add_val " << add_val << ' ';
