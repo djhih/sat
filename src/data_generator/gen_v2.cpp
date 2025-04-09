@@ -97,7 +97,7 @@ double fidelity_Fij(double theta_k1, double theta_e, double n_sg, double n_ij, d
 
 //! not sure how to decide gen rate 
 double gen_rate(double d) {
-    // return 1;
+    return 1;
     random_device rd;
     mt19937 gen(rd());
     uniform_real_distribution<> dis2(0.01, 1);

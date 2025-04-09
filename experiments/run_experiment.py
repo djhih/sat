@@ -204,7 +204,7 @@ def main():
     # )
     
     # 執行多組實驗
-    for idx in range(1, 5):
+    for idx in range(4, 5):
         output_filename = op_filename + str(idx) + ".txt"
         num_req = 100
         num_sat = idx * 5
