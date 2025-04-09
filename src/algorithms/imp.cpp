@@ -32,7 +32,8 @@ unordered_map<pii, double, PairHash> rate_gs_sat;
 unordered_map<pii, double, PairHash> rate_gs_p_sat;    
 unordered_map<pii, double, PairHash> fid_gs_sat;       
 unordered_map<pii, double, PairHash> fid_gs_p_sat;    
-unordered_map<pii, bool, PairHash> node_adj;    
+bool node_adj[1000][1000];    
+bool nodes_in_imp_ans[1000000]; //! if nodes size over will...
 
 double fidelity_threshold = 0.5;
 double angle_threshold = 20;
@@ -179,7 +180,7 @@ void transfer_graph(){
             if(nodes[i].gs1 == nodes[j].gs1 || nodes[i].gs2 == nodes[j].gs2 || nodes[i].gs1 == nodes[j].gs2 || nodes[i].gs2 == nodes[j].gs1 || nodes[i].sat == nodes[j].sat){
                 nodes[i].neighboor.emplace_back(j);
                 nodes[j].neighboor.emplace_back(i);
-                node_adj[{i, j}] = 1;
+                node_adj[i][j] = 1;
             }
         }
     }
@@ -247,44 +248,108 @@ void rescale(double val_greedy){
     }
 }
 
+bool check_improve(vector<vector<int>>& claws){
+    // find del nodes
+    vector<vector<int>> del_nodes;
+    for(auto claw: claws){
+        vector<int>del_tmp;
+
+        for(auto x: claw){
+            for(auto y: nodes[x].neighboor){
+                if(nodes_in_imp_ans[y]){
+                    del_tmp.emplace_back(y);
+                }
+            }
+        }
+        del_nodes.push_back(del_tmp);
+    }
+
+    // check if the claw can improve the answer
+    bool found = 0;
+    for(int _claw = 0; _claw < claws.size(); _claw++){
+        auto claw = claws[_claw];
+
+        vector<int>del_tmp = del_nodes[_claw];
+        double add_val = 0;
+        for(auto x: claw){
+            if(nodes_in_imp_ans[x]){
+                cout << "already in ans " << x << '\n';
+                continue;
+            }
+            add_val += nodes[x].weight * nodes[x].weight;
+        }
+        for(auto x: del_tmp){
+            add_val -= nodes[x].weight * nodes[x].weight;
+        }
+        
+        if(add_val > 1e-6){
+            // add claw
+            for(auto x: claw){ 
+                imp_ans_nodes.emplace(x);
+                nodes_in_imp_ans[x] = 1;
+            }
+            // remove del_tmp
+            for(auto x: del_tmp){
+                imp_ans_nodes.erase(x);
+                nodes_in_imp_ans[x] = 0;
+            }
+
+            cout << "add claw " << '\n';
+            for(auto x: claw){
+                cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 << " sat " << nodes[x].sat << '\n';
+            }
+            cout << "del claw " << '\n';
+            for(auto x: del_tmp){
+                cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 << " sat " << nodes[x].sat << '\n';
+            }
+            cout << "add_val " << add_val << '\n';
+            found = 1;
+            return found;
+        } else {
+            // out << "not add claw " << ' ';
+            // out << "add_val " << add_val << ' ';
+            // out << "i " << i << " j " << j << " k " << k << ' ';
+            // out << "gs1 " << nodes[claw[0]].gs1 << " gs2 " << nodes[claw[0]].gs2 << " sat " << nodes[claw[0]].sat << '\n';
+        }
+    }
+    return found;
+}
+
 // loop version
 bool get_claw(int center){
     int nei_cen = nodes[center].neighboor.size();
     vector<int>reduce_nodes;
     for(auto x:nodes[center].neighboor){
-        if(imp_ans_nodes.count(x) == 0){
+        if(! nodes_in_imp_ans[x]){
             reduce_nodes.emplace_back(x);
         }
     }
     int reduce_size = reduce_nodes.size();
     for(int i0=0; i0<reduce_size; i0++){
         int i = reduce_nodes[i0];
-        if(imp_ans_nodes.count(i) == 1){
+        if(nodes_in_imp_ans[i]){
             continue;
         }
         for(int j0=i0+1; j0<reduce_size; j0++){
             int j = reduce_nodes[j0];
-            if(imp_ans_nodes.count(j) == 1){
+            if(nodes_in_imp_ans[j]){
                 continue;
             }
             for(int k0=j0+1; k0<reduce_size; k0++){
                 int k = reduce_nodes[k0];
-                if(imp_ans_nodes.count(k) == 1){
+                if(nodes_in_imp_ans[k]){
                     continue;
                 }
-                // check if the three nodes are connected to the node in answer set
-                // check if thses talons are connected with each other, 
-                //      if so, split to multiple claws, and store into vector
                 // cout << "i " << i << " j " << j << " k " << k << '\n';
-                vector<vector<int>> claws;
+                vector<vector<int>> claws(10);
                 bool connected12 = 0, connected13 = 0, connected23 = 0;
-                if(node_adj.count({i, j}) == 1){
+                if(node_adj[i][j] == 1){
                     connected12 = 1;
                 }
-                if(node_adj.count({i, k}) == 1){
+                if(node_adj[i][k] == 1){
                     connected13 = 1;
                 }
-                if(node_adj.count({j, k}) == 1){
+                if(node_adj[j][k] == 1){
                     connected23 = 1;
                 }
                 
@@ -301,135 +366,24 @@ bool get_claw(int center){
                     claws.push_back({j, k});
                 }
                 
-
-                // find del nodes
-                vector<vector<int>> del_nodes;
-                for(auto claw: claws){
-                    vector<int>del_tmp;
-            
-                    for(auto x: claw){
-                        for(auto y: nodes[x].neighboor){
-                            if(imp_ans_nodes.count(y) == 1){
-                                del_tmp.emplace_back(y);
-                            }
-                        }
-                    }
-                    del_nodes.push_back(del_tmp);
-                }
-
-                // check if the claw can improve the answer
-                bool found = 0;
-                for(int _claw = 0; _claw < claws.size(); _claw++){
-                    auto claw = claws[_claw];
-    
-                    vector<int>del_tmp = del_nodes[_claw];
-                    double add_val = 0;
-                    for(auto x: claw){
-                        if(imp_ans_nodes.count(x) == 1){
-                            cout << "already in ans " << x << '\n';
-                            continue;
-                        }
-                        add_val += nodes[x].weight * nodes[x].weight;
-                    }
-                    for(auto x: del_tmp){
-                        add_val -= nodes[x].weight * nodes[x].weight;
-                    }
-                    
-                    if(add_val > 1e6){
-                        // add claw
-                        for(auto x: claw){ 
-                            imp_ans_nodes.emplace(x);
-                        }
-                        // remove del_tmp
-                        for(auto x: del_tmp){
-                            imp_ans_nodes.erase(x);
-                        }
-
-                        cout << "add claw " << '\n';
-                        for(auto x: claw){
-                            cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 << " sat " << nodes[x].sat << '\n';
-                        }
-                        cout << "del claw " << '\n';
-                        for(auto x: del_tmp){
-                            cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 << " sat " << nodes[x].sat << '\n';
-                        }
-                        cout << "add_val " << add_val << '\n';
-                        found = 1;
-                        return found;
-                        break;
-                    } else {
-                        // out << "not add claw " << ' ';
-                        // out << "add_val " << add_val << ' ';
-                        // out << "i " << i << " j " << j << " k " << k << ' ';
-                        // out << "gs1 " << nodes[claw[0]].gs1 << " gs2 " << nodes[claw[0]].gs2 << " sat " << nodes[claw[0]].sat << '\n';
-                    }
-                }
-                if(found == 1){
-                    return found;
+                if(check_improve(claws)){
+                    return 1;
                 }
                
             }
         }
     }
 
-    vector<vector<int>> claws;
+    vector<vector<int>> claws(10);
     for(int i=0; i<nei_cen; i++){
-        if(imp_ans_nodes.count(i) == 1){
+        if(nodes_in_imp_ans[i]){
             continue;
         }
         claws.push_back({i});
     }
-    vector<vector<int>> del_nodes;
-    for(auto claw: claws){
-        vector<int>del_tmp;
-        for(auto x: claw){
-            for(auto y: nodes[x].neighboor){
-                if(imp_ans_nodes.count(y) == 1){
-                    del_tmp.emplace_back(y);
-                }
-            }
-        }
-        del_nodes.push_back(del_tmp);
-    }
-    bool found = 0;
-    for(int _claw = 0; _claw < claws.size(); _claw++){
-        auto claw = claws[_claw];
-        vector<int>del_tmp = del_nodes[_claw];
-        double add_val = 0;
-        for(auto x: claw){
-            add_val += nodes[x].weight * nodes[x].weight;
-        }
-        for(auto x: del_tmp){
-            add_val -= nodes[x].weight * nodes[x].weight;
-        }
-        if(add_val > 1e6){
-            // add claw
-            for(auto x: claw){ 
-                imp_ans_nodes.emplace(x);
-            }
-            // remove del_tmp
-            for(auto x: del_tmp){
-                imp_ans_nodes.erase(x);
-            }
 
-            cout << "add claw " << '\n';
-            for(auto x: claw){
-                cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 << " sat " << nodes[x].sat << '\n';
-            }
-            cout << "del claw " << '\n';
-            for(auto x: del_tmp){
-                cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 << " sat " << nodes[x].sat << '\n';
-            }
-            cout << "add_val " << add_val << '\n';
-            found = 1;
-            return found;
-            // break;
-        } else {
-            // out << "not add claw " << '\n';
-        }
-    }
-    if(found == 1){
-        return found;
+    if(check_improve(claws)){
+        return 1;
     }
     return 0;
 }
@@ -467,6 +421,11 @@ void imp(){
         }
     }
 
+    // copy to bool array
+    for(auto x:imp_ans_nodes){
+        nodes_in_imp_ans[x] = 1;
+    }
+
     // 2. find all claws
     for(int i=0; i<nodes.size(); i++){
         cout << "now on " << i << '\n';
@@ -479,7 +438,7 @@ void imp(){
     
 }
 
-string infile = "dataset/raw/dataset1.txt";
+string infile = "dataset/raw/dataset4.txt";
 void input(){
     ifstream in(infile);
     assert(in);
@@ -517,7 +476,7 @@ void input(){
     }
     cout << "end input\n";
 }
-string outfile = "dataset/output/res_imp_1.txt";
+string outfile = "dataset/output/res_imp_4.txt";
 void output(){
     ofstream out(outfile);
     assert(out);
