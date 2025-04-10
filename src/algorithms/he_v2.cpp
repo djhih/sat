@@ -108,7 +108,6 @@ GroundStation gs[10000];
 Requirement req[100000];
 
 void data_process(){
-    
     for (int i = 0; i < G; i++){
         for (int j = 0; j < S; j++){
             if (sat[j].check_fid(i)){

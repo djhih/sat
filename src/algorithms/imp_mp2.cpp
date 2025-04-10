@@ -10,8 +10,8 @@
 #include <fstream>
 #include <cassert>
 #include <unordered_map>
-#include <chrono>
 #include <omp.h>
+#include <chrono>
 using namespace std;
 
 typedef pair<double, double> pdd;
@@ -116,7 +116,10 @@ Satellite sat[10009];
 GroundStation gs[10900];
 Requirement req[100000];
 
-// 進行資料處理，計算每個衛星可以服務哪些 ground station / pair
+////////////////////////
+// 舊程式碼的部分 (data_process, transfer_graph, greedy, input, output) 保持不變
+////////////////////////
+
 void data_process(){
     for (int i = 0; i < G; i++){
         for (int j = 0; j < S; j++){
@@ -156,7 +159,6 @@ struct Node {
 
 vector<Node> nodes;
 
-// 建立圖，將每個衛星之可服務 ground station pair 轉換成圖中的節點，並依據條件建立鄰接關係
 void transfer_graph(){
     int ptr = 0;
     for (int i = 0; i < S; i++) {
@@ -245,146 +247,128 @@ void rescale(double val_greedy){
     const double K = 200, V = nodes.size();
     double ratio = K * V / val_greedy;
     for(int i = 0; i < V; i++){
-        // cout << "nodes " << i << " weight " << nodes[i].weight << " * " << ratio << " = " << '\n';
         nodes[i].weight *= ratio;
     }
 }
 
-// 函式 check_improve 用來檢查傳入的 claws 是否能改善解答
-bool check_improve(vector<vector<int>>& claws){
-    // 對每個 claw 收集刪除候選節點 (del_nodes)
-    vector<vector<int>> del_nodes;
-    for(auto claw : claws){
-        set<int> del_tmp;
-        for(auto x : claw){
-            for(auto y : nodes[x].neighboor){
-                if(nodes_in_imp_ans[y]){
-                    del_tmp.insert(y);
-                }
-            }
-        }
-        del_nodes.push_back(vector<int>(del_tmp.begin(), del_tmp.end()));
-    }
-    // 依序檢查每個 claw 的增益是否大於門檻值
-    bool found = false;
-    for(int _claw = 0; _claw < claws.size(); _claw++){
-        auto claw = claws[_claw];
-        vector<int> del_tmp = del_nodes[_claw];
-        double add_val = 0;
-        for(auto x : claw){
-            if(nodes_in_imp_ans[x]){
-                cout << "already in ans " << x << '\n';
-                continue;
-            }
-            add_val += nodes[x].weight * nodes[x].weight;
-        }
-        for(auto x : del_tmp){
-            add_val -= nodes[x].weight * nodes[x].weight;
-        }
-        // cout << "add_val " << add_val << '\n';
-        if(add_val > 1e-6){
-            // 若改善成立，加入新解且移除受影響節點
-            for(auto x : claw){ 
-                imp_ans_nodes.insert(x);
-                nodes_in_imp_ans[x] = 1;
-            }
-            for(auto x : del_tmp){
-                imp_ans_nodes.erase(x);
-                nodes_in_imp_ans[x] = 0;
-            }
-            cout << "add claw " << '\n';
-            for(auto x : claw){
-                cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 
-                     << " sat " << nodes[x].sat << '\n';
-            }
-            cout << "del claw " << '\n';
-            for(auto x : del_tmp){
-                cout << "gs1 " << nodes[x].gs1 << " gs2 " << nodes[x].gs2 
-                     << " sat " << nodes[x].sat << '\n';
-            }
-            cout << "add_val " << add_val << '\n';
-            found = true;
-            return found;
-        }
-    }
-    return found;
-}
+// *********************************************************************
+// 以下新增「批次搜尋候選改善」的機制
+// *********************************************************************
 
-// 平行化 get_claw 函式：針對中心節點，在其鄰居中平行搜尋各種候選 claw 組合
-bool get_claw(int center) {
-    int nei_cen = nodes[center].neighboor.size();
-    vector<int> reduce_nodes;
-    for (auto x : nodes[center].neighboor) {
+// 結構 Candidate：記錄候選改善包含新增的節點、要刪除的節點，以及淨增益值
+struct Candidate {
+    vector<int> add_nodes;
+    vector<int> remove_nodes;
+    double gain;
+};
+
+// evaluate_candidate() 計算傳入 claw 的淨增益
+Candidate evaluate_candidate(const vector<int>& claw) {
+    Candidate cand;
+    cand.add_nodes = claw;
+    cand.gain = 0.0;
+    set<int> removals;
+    for (auto x : claw) {
+        // 若 x 未在解中，計算加成
         if (!nodes_in_imp_ans[x])
-            reduce_nodes.push_back(x);
-    }
-    int reduce_size = reduce_nodes.size();
-    bool found = false;
-    
-    // 平行化三個節點組合搜尋
-    #pragma omp parallel for schedule(dynamic) shared(found)
-    for (int i0 = 0; i0 < reduce_size; i0++) {
-        if (found) continue;
-        int i = reduce_nodes[i0];
-        if (nodes_in_imp_ans[i]) continue;
-        for (int j0 = i0 + 1; j0 < reduce_size; j0++) {
-            if (found) break;
-            int j = reduce_nodes[j0];
-            if (nodes_in_imp_ans[j]) continue;
-            for (int k0 = j0 + 1; k0 < reduce_size; k0++) {
-                if (found) break;
-                int k = reduce_nodes[k0];
-                if (nodes_in_imp_ans[k]) continue;
-                vector<vector<int>> claws;
-                if (!node_adj[i][j] && !node_adj[i][k] && !node_adj[j][k]) {
-                    claws.push_back({i, j, k});
-                }
-                if (!claws.empty() && check_improve(claws)) {
-                    #pragma omp critical
-                    {
-                        found = true;
-                    }
-                    break;
-                }
-            }
+            cand.gain += nodes[x].weight * nodes[x].weight;
+        // 將 x 的所有鄰居中在解中的節點加入 removals 集合
+        for (auto y : nodes[x].neighboor) {
+            if (nodes_in_imp_ans[y])
+                removals.insert(y);
         }
     }
-    if (found)
-        return true;
-    
-    // 平行化兩個節點的候選 (claw2)
-    vector<vector<int>> claw2;
-    #pragma omp parallel for schedule(dynamic)
-    for (int i0 = 0; i0 < reduce_size; i0++) {
-        int i = reduce_nodes[i0];
-        if (nodes_in_imp_ans[i]) continue;
-        for (int j0 = i0 + 1; j0 < reduce_size; j0++) {
-            int j = reduce_nodes[j0];
-            if (nodes_in_imp_ans[j] || node_adj[i][j]) continue;
-            #pragma omp critical
-            {
-                claw2.push_back({i, j});
-            }
-        }
+    cand.remove_nodes.assign(removals.begin(), removals.end());
+    double removalPenalty = 0.0;
+    for (auto y : cand.remove_nodes) {
+        removalPenalty += nodes[y].weight * nodes[y].weight;
     }
-    if (check_improve(claw2))
-        return true;
-    
-    // 平行化單一節點候選 (claw1)
-    vector<vector<int>> claw1;
-    #pragma omp parallel for schedule(dynamic)
-    for (int i0 = 0; i0 < reduce_size; i0++) {
-        int i = reduce_nodes[i0];
-        if (nodes_in_imp_ans[i]) continue;
-        #pragma omp critical
-{
-            claw1.push_back({i});
-        }
-    }
-    return check_improve(claw1);
+    cand.gain -= removalPenalty;
+    return cand;
 }
 
-void imp(){
+// 批次搜尋所有中心節點的候選改善
+bool batch_candidate_improvement() {
+    vector<Candidate> candidates;  // 收集所有正增益候選
+    // 平行遍歷每個 center node
+    #pragma omp parallel for schedule(dynamic)
+    for (int center = 0; center < (int)nodes.size(); center++) {
+        vector<int> reduce_nodes;
+        cout << "now on " << center << '\n';
+        // 對 center node，取得其鄰居中尚未在解中的節點
+        for (auto x : nodes[center].neighboor) {
+            if (!nodes_in_imp_ans[x])
+                reduce_nodes.push_back(x);
+        }
+        int reduce_size = reduce_nodes.size();
+        // 枚舉三個節點組合（claw3）
+        for (int i = 0; i < reduce_size; i++){
+            for (int j = i+1; j < reduce_size; j++){
+                for (int k = j+1; k < reduce_size; k++){
+                    int a = reduce_nodes[i], b = reduce_nodes[j], c = reduce_nodes[k];
+                    if (!node_adj[a][b] && !node_adj[a][c] && !node_adj[b][c]) {
+                        vector<int> claw = {a, b, c};
+                        Candidate cand = evaluate_candidate(claw);
+                        if (cand.gain > 1e-6) {
+                            #pragma omp critical
+                            candidates.push_back(cand);
+                        }
+                    }
+                }
+            }
+        }
+        // 枚舉兩個節點組合（claw2）
+        for (int i = 0; i < reduce_size; i++){
+            for (int j = i+1; j < reduce_size; j++){
+                int a = reduce_nodes[i], b = reduce_nodes[j];
+                if (!node_adj[a][b]) {
+                    vector<int> claw = {a, b};
+                    Candidate cand = evaluate_candidate(claw);
+                    if (cand.gain > 1e-6) {
+                        #pragma omp critical
+                        candidates.push_back(cand);
+                    }
+                }
+            }
+        }
+        // 單一節點候選（claw1）
+        for (int i = 0; i < reduce_size; i++){
+            vector<int> claw = {reduce_nodes[i]};
+            Candidate cand = evaluate_candidate(claw);
+            if (cand.gain > 1e-6) {
+                #pragma omp critical
+                candidates.push_back(cand);
+            }
+        }
+    } // end parallel for
+
+    // 若沒有候選改善，則回傳 false
+    if(candidates.empty())
+        return false;
+
+    // 選擇淨增益最大的候選改善（你也可以選第一個正增益候選）
+    Candidate bestCand = candidates[0];
+    for(auto &cand : candidates) {
+        if(cand.gain > bestCand.gain)
+            bestCand = cand;
+    }
+
+    // 在單一執行緒中更新全域解：將 bestCand.add_nodes 加入解，並將 bestCand.remove_nodes 移除
+    for(auto x : bestCand.add_nodes){
+        imp_ans_nodes.insert(x);
+        nodes_in_imp_ans[x] = true;
+    }
+    for(auto x : bestCand.remove_nodes){
+        imp_ans_nodes.erase(x);
+        nodes_in_imp_ans[x] = false;
+    }
+
+    cout << "Applied candidate: gain = " << bestCand.gain << endl;
+    return true;
+}
+
+// 修改 imp() 函數，採用批次更新策略
+void imp() {
     // Step 1: 透過貪婪法取得初始解
     greedy();
     double greedy_value = 0;
@@ -394,29 +378,25 @@ void imp(){
     }
     rescale(greedy_value);
     // 將貪婪初始解複製到 imp_ans_nodes 與 nodes_in_imp_ans 陣列中
-    for(int i = 0; i < greedy_ans_gsp_sat.size(); i++){
-        for(int j = 0; j < nodes.size(); j++){
+    for (int i = 0; i < greedy_ans_gsp_sat.size(); i++){
+        for (int j = 0; j < nodes.size(); j++){
             if(nodes[j].gsp_id == greedy_ans_gsp_sat[i].first && nodes[j].sat == greedy_ans_gsp_sat[i].second){
                 imp_ans_nodes.insert(j);
             }
         }
     }
     for(auto x : imp_ans_nodes){
-        nodes_in_imp_ans[x] = 1;
+        nodes_in_imp_ans[x] = true;
     }
-    // Step 2: 針對每個節點當作中心搜尋改善解 (claw)
-    for(int i = 0; i < nodes.size(); i++){
-        cout << "now on " << i << '\n';
-        int center = i;
-        if(get_claw(center)){
-            // 若發現改善解則重置 i 以重新搜尋
-            cout << "found claw " << center << '\n';
-            i = -1;
-        }
-    }    
+    // Step 2: 批次搜尋候選改善，直到找不到任何改善為止
+    while(batch_candidate_improvement()){
+        // 每次更新後可以印出目前解的狀況
+        cout << "Batch improvement applied, current solution size: " << imp_ans_nodes.size() << '\n';
+    }
 }
 
-string infile = "dataset/raw/dataset4.txt";
+// 以下 input() 與 output() 與 main() 保持原有內容
+string infile = "dataset/raw/dataset1.txt";
 void input(){
     ifstream in(infile);
     assert(in);
@@ -452,7 +432,7 @@ void input(){
     }
     cout << "end input\n";
 }
-string outfile = "dataset/output/res_imp_4.txt";
+string outfile = "dataset/output/res_imp_mp_1.txt";
 void output(){
     ofstream out(outfile);
     assert(out);
@@ -466,7 +446,7 @@ void output(){
     out << "Total generation rate: " << tot_rate << '\n';
     out.close();
 }
-
+  
 int main(int argc, char* argv[]){
     if(argc == 3){
         infile = argv[1];
@@ -474,8 +454,6 @@ int main(int argc, char* argv[]){
     }
     input();
     auto start = std::chrono::high_resolution_clock::now();
-
-  
     data_process();
     transfer_graph();
     imp();

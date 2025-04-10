@@ -9,6 +9,7 @@
 #include <fstream>
 #include <cassert>
 #include <unordered_map>
+#include <chrono>
 using namespace std;
 
 typedef pair<double, double> pdd;
@@ -428,7 +429,7 @@ void imp(){
 
     // 2. find all claws
     for(int i=0; i<nodes.size(); i++){
-        cout << "now on " << i << '\n';
+        // cout << "now on " << i << '\n';
         int center = i, add_val = 0;     // choose nodes[i] as center node
         bool loop_res = get_claw(center);
         if(loop_res == 1){
@@ -496,10 +497,14 @@ int main(int argc, char* argv[]){
         outfile = argv[2];
     }
     input();
+    auto start = std::chrono::high_resolution_clock::now();
     data_process();
     transfer_graph();
     // dfs();
     imp();
     output();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Total elapsed time: " << elapsed.count() << " seconds" << std::endl;
     return 0;
 }

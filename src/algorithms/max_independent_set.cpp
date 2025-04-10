@@ -9,6 +9,7 @@
 #include <fstream>
 #include <cassert>
 #include <unordered_map>
+#include <chrono>
 using namespace std;
 
 typedef pair<double, double> pdd;
@@ -279,6 +280,7 @@ int main(int argc, char* argv[]){
         outfile = argv[2];
     }
     input();
+    auto start = std::chrono::high_resolution_clock::now();
     cout << "finish input\n";
     data_process();
     cout << "finish data process\n";
@@ -287,5 +289,8 @@ int main(int argc, char* argv[]){
     dfs();
     cout << "finish dfs\n";
     output();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Total elapsed time: " << elapsed.count() << " seconds" << std::endl;
     return 0;
 }

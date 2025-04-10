@@ -10,6 +10,7 @@
 #include <cassert>
 #include <unordered_map>
 #include <filesystem>
+#include <chrono>
 #include <limits.h>
 using namespace std;
 
@@ -229,8 +230,12 @@ int main(int argc, char* argv[]){
         outfile = argv[2];
     }
     input();
+    auto start = std::chrono::high_resolution_clock::now();
     data_process();
     greedy_algorithm();
     output();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Total elapsed time: " << elapsed.count() << " seconds" << std::endl;
     return 0;
 }
