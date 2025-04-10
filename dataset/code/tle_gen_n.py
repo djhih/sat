@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-from skyfield.api import load, wgs84
 import numpy as np
 
 def farthest_point_sampling(points, N):
@@ -9,7 +8,8 @@ def farthest_point_sampling(points, N):
     N: int，要選取的衛星數量
     """
     # 隨機選取第一個點的索引
-    selected_indices = [np.random.randint(len(points))]
+    # selected_indices = [np.random.randint(len(points))]
+    selected_indices = [0]  # 固定選擇第一個點
     # 建立一個陣列保存每個點到已選點集合的最小距離，初始設定為無窮大
     distances = np.full(len(points), np.inf)
     
@@ -26,6 +26,7 @@ def farthest_point_sampling(points, N):
     return selected_indices
 
 def main():
+    # np.random.seed(42)
     # 使用 argparse 取得命令列參數
     parser = argparse.ArgumentParser(
         description="從 NORAD TLE 資料中選取均勻分布的 N 顆衛星"
