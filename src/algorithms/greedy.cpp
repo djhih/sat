@@ -10,7 +10,6 @@
 #include <cassert>
 #include <unordered_map>
 #include <filesystem>
-#include <direct.h>
 #include <limits.h>
 using namespace std;
 
@@ -171,11 +170,6 @@ string infile = "dataset/raw/dataset.txt";
 void input(){
     ifstream in(infile);
     char buffer[1000];
-    if (_getcwd(buffer, 1000)) {
-        std::cout << "Current working directory: " << buffer << std::endl;
-    } else {
-        perror("_getcwd error");
-    }
     assert(in);
     in >> S >> G >> R;
     // cout << "S " << S << " G " << G << " R " << R << '\n';
