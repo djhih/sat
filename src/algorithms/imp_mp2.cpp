@@ -37,7 +37,7 @@ unordered_map<pii, double, PairHash> fid_gs_sat;
 unordered_map<pii, double, PairHash> fid_gs_p_sat;    
 
 // 使用固定大小的二維陣列記錄節點間是否有連結（若節點數量過多需調整）
-bool node_adj[1000][1000];    
+bool node_adj[10000][10000];    
 // 使用固定大小的布林陣列記錄某些節點是否已在改善解中
 bool nodes_in_imp_ans[1000000]; 
 
@@ -448,7 +448,7 @@ void output(){
 }
   
 int main(int argc, char* argv[]){
-    if(argc == 3){
+    if(argc >= 3){
         infile = argv[1];
         outfile = argv[2];
     }
