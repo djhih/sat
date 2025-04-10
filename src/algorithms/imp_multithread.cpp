@@ -244,6 +244,7 @@ void rescale(double val_greedy){
     const double K = 200, V = nodes.size();
     double ratio = K * V / val_greedy;
     for(int i = 0; i < V; i++){
+        // cout << "nodes " << i << " weight " << nodes[i].weight << " * " << ratio << " = " << '\n';
         nodes[i].weight *= ratio;
     }
 }
@@ -253,15 +254,15 @@ bool check_improve(vector<vector<int>>& claws){
     // 對每個 claw 收集刪除候選節點 (del_nodes)
     vector<vector<int>> del_nodes;
     for(auto claw : claws){
-        vector<int> del_tmp;
+        set<int> del_tmp;
         for(auto x : claw){
             for(auto y : nodes[x].neighboor){
                 if(nodes_in_imp_ans[y]){
-                    del_tmp.push_back(y);
+                    del_tmp.insert(y);
                 }
             }
         }
-        del_nodes.push_back(del_tmp);
+        del_nodes.push_back(vector<int>(del_tmp.begin(), del_tmp.end()));
     }
     // 依序檢查每個 claw 的增益是否大於門檻值
     bool found = false;
@@ -279,6 +280,7 @@ bool check_improve(vector<vector<int>>& claws){
         for(auto x : del_tmp){
             add_val -= nodes[x].weight * nodes[x].weight;
         }
+        // cout << "add_val " << add_val << '\n';
         if(add_val > 1e-6){
             // 若改善成立，加入新解且移除受影響節點
             for(auto x : claw){ 
@@ -403,10 +405,11 @@ void imp(){
     }
     // Step 2: 針對每個節點當作中心搜尋改善解 (claw)
     for(int i = 0; i < nodes.size(); i++){
-        cout << "now on " << i << '\n';
+        // cout << "now on " << i << '\n';
         int center = i;
         if(get_claw(center)){
             // 若發現改善解則重置 i 以重新搜尋
+            cout << "found claw " << center << '\n';
             i = -1;
         }
     }    

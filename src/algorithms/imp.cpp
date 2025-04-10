@@ -252,16 +252,16 @@ bool check_improve(vector<vector<int>>& claws){
     // find del nodes
     vector<vector<int>> del_nodes;
     for(auto claw: claws){
-        vector<int>del_tmp;
+        set<int>del_tmp;
 
         for(auto x: claw){
             for(auto y: nodes[x].neighboor){
                 if(nodes_in_imp_ans[y]){
-                    del_tmp.emplace_back(y);
+                    del_tmp.emplace(y);
                 }
             }
         }
-        del_nodes.push_back(del_tmp);
+        del_nodes.push_back(vector<int>(del_tmp.begin(), del_tmp.end()));
     }
 
     // check if the claw can improve the answer
