@@ -38,7 +38,7 @@ def compile_and_run_algorithms(dataset_file, dataset_id):
                       os.path.join("dataset", "output", f"res_he_{dataset_id}.txt")),
         "max_independent": (os.path.join("src", "algorithms", "max_independent_set.cpp"),
                             os.path.join("dataset", "output", f"res_max_{dataset_id}.txt")),
-        "imp": (os.path.join("src", "algorithms", "imp.cpp"),
+        "imp": (os.path.join("src", "algorithms", "imp_multithread.cpp"),
                 os.path.join("dataset", "output", f"res_imp_{dataset_id}.txt")),
     }
 

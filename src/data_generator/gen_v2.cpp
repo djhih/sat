@@ -279,8 +279,9 @@ vector<pair<int, int>> get_all_ground_station_pairs(int lim, int GS) {
                 double height = norm(sat) - get_R_earth();
                 double tmp_fid_a = fidelity_Fij(tmp_ang_a, 20.0, eta_Tot(tmp_dis_a, tmp_h_atm_a), 1.0, fid0);
                 double tmp_fid_b = fidelity_Fij(tmp_ang_b, 20.0, eta_Tot(tmp_dis_b, tmp_h_atm_b), 1.0, fid0);
-                if(tmp_fid_a > 0.6 && tmp_fid_b > 0.6){
+                if(tmp_fid_a > 0.5 && tmp_fid_b > 0.5){
                     can_serve = 1;
+                    // cout << i << " and " << j << " caqn served by " << sat[0] << ' ' << sat[1] << ' ' << sat[2] << '\n';
                     break;
                 }
             }
@@ -290,6 +291,9 @@ vector<pair<int, int>> get_all_ground_station_pairs(int lim, int GS) {
             }
                 
         }
+    }
+    if(cnt < lim){
+        cerr << "Error: not enough pairs can be served\n";
     }
     return pairs;
 }

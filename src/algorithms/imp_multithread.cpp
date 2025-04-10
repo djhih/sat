@@ -187,6 +187,22 @@ void transfer_graph(){
     for(int i = 0; i < ptr; i++){
         nodes[i].weight = rate_gs_p_sat[{nodes[i].gsp_id, nodes[i].sat}]; 
     }
+
+    ofstream out("dataset/output/graph.txt");
+    assert(out);
+    out << "nodes size " << nodes.size() << '\n';
+    for(int i = 0; i < nodes.size(); i++){
+        out << "node " << i << '\n';
+        out << "gs1 " << nodes[i].gs1 << " gs2 " << nodes[i].gs2 
+            << " sat " << nodes[i].sat << '\n';
+        out << "weight " << nodes[i].weight << '\n';
+        out << "neighboor ";
+        for(auto x : nodes[i].neighboor){
+            out << x << ' ';
+        }
+        out << '\n';
+    }
+    out.close();
 }
 
 vector<pair<int, int>> greedy_ans_gsp_sat;

@@ -1,10 +1,3 @@
-accept gs1 37 gs2 118 sat 6 gen rate 28
-accept gs1 55 gs2 69 sat 11 gen rate 22
-accept gs1 63 gs2 75 sat 16 gen rate 35
-accept gs1 49 gs2 62 sat 17 gen rate 43
-accept gs1 30 gs2 89 sat 18 gen rate 26
-accept gs1 32 gs2 83 sat 21 gen rate 32
-accept gs1 36 gs2 102 sat 1 gen rate 43
-accept gs1 77 gs2 97 sat 53 gen rate 46
-accept gs1 64 gs2 70 sat 2 gen rate 42
-Total generation rate: 317
+accept gs1 1 gs2 2 sat 1 gen rate 1
+accept gs1 0 gs2 3 sat 2 gen rate 1
+Total generation rate: 2

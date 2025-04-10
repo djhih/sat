@@ -1,12 +1,14 @@
 import os
 import subprocess
+import matplotlib
+matplotlib.use('Agg')  # 不使用 GUI 的 headless 後端
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 import matplotlib
-matplotlib.rcParams["font.family"] = "sans-serif"
-matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei", "SimHei", "Arial Unicode MS", "sans-serif"]
-matplotlib.rcParams["axes.unicode_minus"] = False
+# matplotlib.rcParams["font.family"] = "sans-serif"
+# matplotlib.rcParams["font.sans-serif"] = ["Microsoft JhengHei", "SimHei", "Arial Unicode MS", "sans-serif"]
+# matplotlib.rcParams["axes.unicode_minus"] = False
 
 def run_command(cmd, description="", timeout=None):
     print(description)
@@ -26,7 +28,7 @@ def run_data_generator(num_sat, num_req, sat_filename, gs_filename, output_filen
     """
     # 生成 n 個衛星資料
     run_command(
-        ["python3", "dataset/code/tle_gen_n.py", str(num_sat)],
+        ["python3", "dataset/code/us_sat.py", str(num_sat)],
         f"產生 {num_sat} 筆衛星資料..."
     )
     
@@ -65,7 +67,7 @@ def compile_and_run_algorithms(dataset_file, dataset_id):
                       Path("dataset") / "output" / f"res_he_{dataset_id}.txt"),
         "max_independent": (Path("src") / "algorithms" / "max_independent_set.cpp",
                             Path("dataset") / "output" / f"res_max_{dataset_id}.txt"),
-        "imp": (Path("src") / "algorithms" / "imp.cpp",
+        "imp": (Path("src") / "algorithms" / "imp_multithread.cpp",
                 Path("dataset") / "output" / f"res_imp_{dataset_id}.txt")
     }
 
@@ -176,7 +178,7 @@ def plot_grouped_total_rates_by_algorithm(dataset_ids):
     
     ax.set_xlabel("Dataset ID")
     ax.set_ylabel("Total Generation Rate")
-    ax.set_title("各演算法之 Total Generation Rate 比較 (分組柱狀圖)")
+    ax.set_title("Total Generation Rate")
     ax.set_xticks(x)
     ax.set_xticklabels(dataset_ids)
     ax.legend()
@@ -204,10 +206,10 @@ def main():
     # )
     
     # 執行多組實驗
-    for idx in range(4, 5):
+    for idx in range(1, 5):
         output_filename = op_filename + str(idx) + ".txt"
-        num_req = 100
-        num_sat = idx * 5
+        num_req = 50
+        num_sat = idx * 2
         
         dataset_ids.append(str(idx))
         print(f"\n===== 執行實驗：{idx} =====")
